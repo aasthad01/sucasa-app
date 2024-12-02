@@ -20,7 +20,7 @@ class _PickYourTasteState extends State<PickYourTaste> {
     'Cozy',
     'Ethnic/Desi',
     'French Country',
-    'Japenese design',
+    'Japanese design',
     'Minimalist',
     'Modern',
     'Royal',
@@ -28,25 +28,41 @@ class _PickYourTasteState extends State<PickYourTaste> {
     'Vintage',
   ];
 
+  List<String> images = [
+    'assets/images/aes.jpg',
+    'assets/images/bohe.jpg',
+    'assets/images/chill.jpg',
+    'assets/images/coas.jpg',
+    'assets/images/color.jpg',
+    'assets/images/cont.jpg',
+    'assets/images/cozy.jpg',
+    'assets/images/eth.jpg',
+    'assets/images/fre.jpg',
+    'assets/images/jap.jpg',
+    'assets/images/mini.jpg',
+    'assets/images/mod.jpg',
+    'assets/images/royal.jpg',
+    'assets/images/rust.jpg',
+    'assets/images/vint.jpg',
+  ];
+
   List<bool> isSelected = List.generate(15, (index) => false);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: lightColorScheme.primary, // Background color
+      backgroundColor: lightColorScheme.primary,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const SizedBox(
-              height: 54,
-            ),
+            const SizedBox(height: 54),
             const Text(
               'Pick your Taste',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: Color.fromARGB(255, 36, 35, 36), // Text color
+                color: Color.fromARGB(255, 251, 246, 251),
               ),
             ),
             const SizedBox(height: 16),
@@ -66,25 +82,27 @@ class _PickYourTasteState extends State<PickYourTaste> {
                       });
                     },
                     child: Container(
-                      width: 80,
-                      height: 40,
                       decoration: BoxDecoration(
                         color: isSelected[index]
-                            ? const Color.fromARGB(
-                                255, 197, 222, 214) // Selected color
-                            : const Color(0xFFD9D9D9), // Unselected color
+                            ? const Color.fromARGB(255, 197, 222, 214)
+                            : const Color(0xFFD9D9D9),
                         borderRadius: BorderRadius.circular(16),
+                        image: DecorationImage(
+                          image: AssetImage(images[index]),
+                          fit: BoxFit.cover,
+                          colorFilter: ColorFilter.mode(
+                            Colors.black.withOpacity(isSelected[index] ? 0.5 : 0.3),
+                            BlendMode.darken,
+                          ),
+                        ),
                       ),
                       child: Center(
                         child: Text(
                           options[index],
                           style: TextStyle(
                             fontSize: 12,
-                            color: isSelected[index]
-                                ? const Color.fromARGB(
-                                    255, 36, 36, 36) // Text color when selected
-                                : const Color.fromARGB(255, 36, 36,
-                                    36), // Text color when unselected
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
                           ),
                         ),
                       ),
@@ -96,7 +114,6 @@ class _PickYourTasteState extends State<PickYourTaste> {
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () {
-                // Get the selected options
                 List<String> selectedOptions = [];
                 for (int i = 0; i < options.length; i++) {
                   if (isSelected[i]) {
@@ -104,18 +121,15 @@ class _PickYourTasteState extends State<PickYourTaste> {
                   }
                 }
 
-                // Navigate to the next page
-                // You can pass the selected options using Navigator arguments
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (context) =>
-                          Home() // Replace with your next page
-                      ),
+                    builder: (context) => Home(), // Replace with your next page
+                  ),
                 );
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.black, // Button background color
+                backgroundColor: Colors.black,
                 padding:
                     const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
               ),
@@ -123,7 +137,6 @@ class _PickYourTasteState extends State<PickYourTaste> {
                 'SUBMIT',
                 style: TextStyle(
                   color: Colors.white,
-                  // Button text color
                 ),
               ),
             ),

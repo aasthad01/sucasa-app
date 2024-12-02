@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:icons_plus/icons_plus.dart';
+import 'package:start/screens/forgot_password.dart';
 import 'package:start/screens/options.dart';
 import 'package:start/screens/signup_screen.dart';
 import 'package:start/widget/custom_scaffold.dart';
 import '../theme/theme.dart';
-import 'package:get/get.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
 
@@ -26,9 +28,8 @@ class _SignInScreenState extends State<SignInScreen> {
       isLoading = true;
     });
     try {
-      UserCredential userCredential = await FirebaseAuth.instance
-          .signInWithEmailAndPassword(
-              email: _emailController.text, password: _passwordController.text);
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+          email: _emailController.text, password: _passwordController.text);
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) {
@@ -41,6 +42,44 @@ class _SignInScreenState extends State<SignInScreen> {
       } else if (e.code == 'wrong password') {
         print('Incorrect password');
       }
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('something went wrong')));
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  Future<void> signInWithGoogle() async {
+    setState(() {
+      isLoading = true;
+    });
+    try {
+      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+      if (googleUser != null) {
+        final GoogleSignInAuthentication googleAuth =
+            await googleUser.authentication;
+
+        final OAuthCredential credential = GoogleAuthProvider.credential(
+          accessToken: googleAuth.accessToken,
+          idToken: googleAuth.idToken,
+        );
+
+        // Sign in to Firebase with the Google credential
+        await FirebaseAuth.instance.signInWithCredential(credential);
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) {
+            return PickYourTaste();
+          }),
+        );
+      }
+    } catch (e) {
+      print("Error during Google Sign-In: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to sign in with Google')));
     } finally {
       setState(() {
         isLoading = false;
@@ -58,7 +97,6 @@ class _SignInScreenState extends State<SignInScreen> {
   @override
   Widget build(BuildContext context) {
     return CustomScaffold(
-      key: _formSignInKey,
       child: Column(
         children: [
           const Expanded(
@@ -99,7 +137,6 @@ class _SignInScreenState extends State<SignInScreen> {
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
                         textInputAction: TextInputAction.next,
-                        onSaved: (email) {},
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return 'Please enter Email';
@@ -186,6 +223,14 @@ class _SignInScreenState extends State<SignInScreen> {
                             ],
                           ),
                           GestureDetector(
+                           onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (e) => ForgetPasswordScreen(),
+                                ),
+                              );
+                            }, 
                             child: Text(
                               'Forget password?',
                               style: TextStyle(
@@ -202,13 +247,20 @@ class _SignInScreenState extends State<SignInScreen> {
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: () {
-                            if (_formSignInKey.currentState!.validate()) {
-                              signInWithEmailAndPassword();
-                            }
-                          },
-                          child: const Text('Sign up'),
-                        ),
+                            style: ElevatedButton.styleFrom(backgroundColor: const Color.fromARGB(217, 37, 90, 117), // Button color
+    ),
+                            onPressed: () {
+                              if (_formSignInKey.currentState!.validate()) {
+                                signInWithEmailAndPassword();
+                              }
+                            },
+                            child: isLoading
+                                ? CircularProgressIndicator(
+                                    color: Colors.white,
+                                  )
+                                : const Text('Sign in',
+                                  style: TextStyle(color: Color.fromARGB(255, 254, 254, 254)),
+                                )),
                       ),
                       const SizedBox(
                         height: 25.0,
@@ -248,8 +300,10 @@ class _SignInScreenState extends State<SignInScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
-                          Logo(Logos.facebook_f),
-                          Logo(Logos.google),
+                          GestureDetector(
+                            onTap: signInWithGoogle,
+                            child: Logo(Logos.google),
+                          ),
                         ],
                       ),
                       const SizedBox(

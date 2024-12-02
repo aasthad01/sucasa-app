@@ -27,6 +27,24 @@ class _RoomSelectionPageState extends State<Create> {
   RangeValues _budgetRange =
       RangeValues(0, 100000); // Use RangeValues for a range slider
 
+   List<String> styles = [
+    'Aesthetic',
+    'Bohemian',
+    'Chill',
+    'Coastal',
+    'Colour-based',
+    'Contemporary',
+    'Cozy',
+    'Ethnic/Desi',
+    'French Country',
+    'Japanese design',
+    'Minimalist',
+    'Modern',
+    'Royal',
+    'Rustic/Earthy',
+    'Vintage',
+  ];    
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -95,14 +113,28 @@ class _RoomSelectionPageState extends State<Create> {
                       ),
                     ),
                     SizedBox(height: 10),
-                    Wrap(
-                      spacing: 10,
-                      children: [
-                        _buildStyleOption('Modern'),
-                        _buildStyleOption('Classic'),
-                        _buildStyleOption('Minimalist'),
-                      ],
-                    ),
+                   SizedBox(height: 10),
+                SizedBox(
+                  height: 60, // Height of the sliding options
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: styles.length,
+                    itemBuilder: (context, index) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                        child: ChoiceChip(
+                          label: Text(styles[index]),
+                          selected: selectedStyle == styles[index],
+                          onSelected: (bool selected) {
+                            setState(() {
+                              selectedStyle = selected ? styles[index] : null;
+                            });
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                ),
                     SizedBox(height: 20),
                     // Budget Slider
                     Text(
@@ -122,6 +154,8 @@ class _RoomSelectionPageState extends State<Create> {
                           _budgetRange = values;
                         });
                       },
+                      activeColor: lightColorScheme.primary, // Color of the active part of the slider
+                      inactiveColor: lightColorScheme.primary.withOpacity(0.3),
                     ),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -137,7 +171,7 @@ class _RoomSelectionPageState extends State<Create> {
                         onPressed: () {
                           Get.to(() => CameraPage());
                         },
-                        child: Text('NEXT'),
+                        child: Text('NEXT', style: TextStyle(color: Color.fromARGB(255, 254, 254, 254)),),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: lightColorScheme.primary,
                           padding: EdgeInsets.symmetric(
@@ -147,10 +181,35 @@ class _RoomSelectionPageState extends State<Create> {
                         ),
                       ),
                     ),
+                    
                   ],
                 ),
               ),
             ],
+          ),
+          // Bottom Navigation Bar
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: BottomNavigationBar(
+              items: [
+                BottomNavigationBarItem(
+                  icon: Image.asset('assets/images/ho.png', width: 30, height: 30),
+                  label: 'Home',
+                ),
+                BottomNavigationBarItem(
+                  icon: Image.asset('assets/images/add.png', width: 30, height: 30),
+                  label: 'Create',
+                ),
+                BottomNavigationBarItem(
+                  icon: Image.asset('assets/images/pro.png', width: 30, height: 30),
+                  label: 'Profile',
+                ),
+              ],
+              selectedItemColor: lightColorScheme.primary, // Change the color of the selected label
+              unselectedItemColor: lightColorScheme.primary,
+            ),
           ),
         ],
       ),

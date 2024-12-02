@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:start/screens/create.dart';
 import 'package:start/theme/theme.dart';
@@ -16,7 +17,48 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class Home extends StatelessWidget {
+class Home extends StatefulWidget {
+  @override
+  _HomeState createState() => _HomeState();
+}
+
+class _HomeState extends State<Home> {
+  final PageController _pageController = PageController();
+  int _currentPage = 0;
+
+  // Image list for the slider
+  final List<String> _images = [
+    'assets/images/aes.jpg',
+    'assets/images/bohe.jpg',
+    'assets/images/cont.jpg',
+    'assets/images/jap.jpg',
+    'assets/images/mod.jpg',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    // Start the auto-slide timer
+    Timer.periodic(const Duration(seconds:3), (Timer timer) {
+      if (_currentPage < _images.length - 1) {
+        _currentPage++;
+      } else {
+        _currentPage = 0;
+      }
+      _pageController.animateToPage(
+        _currentPage,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -38,16 +80,19 @@ class Home extends StatelessWidget {
               children: [
                 const SizedBox(height: 30),
                 // Header
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
+                Padding(
+                  padding: const EdgeInsets.only(left: 16.0, top: 16.0), // Adjust the value as needed
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
                     'SUCASA',
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
-                    ),
+                   ),
                   ),
                 ),
+              ),
 
                 Container(
                   padding: const EdgeInsets.all(20.0),
@@ -58,42 +103,57 @@ class Home extends StatelessWidget {
                         width: 375, // Set the width of the box
                         height: 250, // Set the height of the box
                         decoration: BoxDecoration(
-                          color: const Color.fromARGB(201, 255, 255,
-                              255), // Set the background color of the box
-                          borderRadius: BorderRadius.circular(
-                              10), // Set the border radius of the box
+                          color: const Color.fromARGB(201, 255, 255, 255),
+                          borderRadius: BorderRadius.circular(10),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.grey, // Set the shadow color
-                              blurRadius: 5, // Set the blur radius
+                              color: Colors.grey,
+                              blurRadius: 5,
                             ),
                           ],
                         ),
-                        padding:
-                            const EdgeInsets.all(10.0), // Corrected padding
-                        child: Align(
-                          alignment: Alignment.bottomRight,
-                          child: ElevatedButton(
-                            onPressed: () {
-                              Get.to(() => Create());
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: lightColorScheme
-                                  .primary, // Set the background color of the button
-                              foregroundColor: const Color.fromARGB(255, 254,
-                                  254, 254), // Set the text color of the button
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(
-                                    10), // Set the border radius of the button
+                        padding: const EdgeInsets.all(10.0),
+                        child: Stack(
+                          children: [
+                            // Image Slider
+                            PageView.builder(
+                              controller: _pageController,
+                              itemCount: _images.length,
+                              itemBuilder: (context, index) {
+                                return ClipRRect(
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: Image.asset(
+                                    _images[index],
+                                    fit: BoxFit.cover,
+                                  ),
+                                );
+                              },
+                            ),
+                            // Create Button
+                            Positioned(
+                              bottom: 10,
+                              right: 10,
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  Get.to(() => Create());
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: lightColorScheme.primary,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
+                                child: const Text('CREATE'),
                               ),
                             ),
-                            child: Text('CREATE'),
-                          ),
+                          ],
                         ),
                       ),
                     ],
                   ),
                 ),
+                // Other sections...
                 // Recommended Section
                 Padding(
                   padding: const EdgeInsets.all(20.0),
@@ -131,11 +191,11 @@ class Home extends StatelessWidget {
                             ),
                           ),
                         ],
-                      ),
+                      ),    
                     ],
                   ),
                 ),
-                // Most Used Section
+                 // Most Used Section
                 Padding(
                   padding: const EdgeInsets.all(20.0),
                   child: Column(
@@ -182,8 +242,7 @@ class Home extends StatelessWidget {
                       ),
                     ],
                   ),
-                ),
-                SizedBox(height: 50), // Add some space at the bottom
+                ),   
               ],
             ),
           ),
@@ -195,21 +254,20 @@ class Home extends StatelessWidget {
             child: BottomNavigationBar(
               items: [
                 BottomNavigationBarItem(
-                  icon: Image.asset('assets/images/ho.png',
-                      width: 30, height: 30),
-                  label: 'Home',
+                  icon: Image.asset('assets/images/ho.png', width: 30, height: 30),
+                  label: 'Home'
                 ),
                 BottomNavigationBarItem(
-                  icon: Image.asset('assets/images/add.png',
-                      width: 30, height: 30),
+                  icon: Image.asset('assets/images/add.png', width: 30, height: 30),
                   label: 'Create',
                 ),
                 BottomNavigationBarItem(
-                  icon: Image.asset('assets/images/pro.png',
-                      width: 30, height: 30),
+                  icon: Image.asset('assets/images/pro.png', width: 30, height: 30),
                   label: 'Profile',
                 ),
               ],
+              selectedItemColor: lightColorScheme.primary, // Change the color of the selected label
+              unselectedItemColor: lightColorScheme.primary,
             ),
           ),
         ],

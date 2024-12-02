@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:icons_plus/icons_plus.dart';
 import 'package:start/screens/options.dart';
 import 'package:start/screens/signin_screen.dart';
 import 'package:start/theme/theme.dart';
 import 'package:start/widget/custom_scaffold.dart';
 import 'package:get/get.dart';
+
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -16,6 +19,116 @@ class SignUpScreen extends StatefulWidget {
 class _SignUpScreenState extends State<SignUpScreen> {
   final _formSignupKey = GlobalKey<FormState>();
   bool agreePersonalData = true;
+  final _fullNameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  bool isLoading = false;
+
+  void createUserWithEmailAndPassword() async {
+    if (_formSignupKey.currentState!.validate() && agreePersonalData) {
+      setState(() {
+        isLoading = true; // Start loading
+      });
+
+      String fullName = _fullNameController.text;
+      String email = _emailController.text;
+      String password = _passwordController.text;
+
+      try {
+        UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
+
+        User? user = userCredential.user;
+        if (user != null) {
+          // Update profile with full name
+          await user.updateProfile(displayName: fullName);
+          if (mounted) {
+            // Navigate to next screen
+            Get.to(() => PickYourTaste());
+          }
+        }
+      } on FirebaseAuthException catch (e) {
+        String message;
+        if (e.code == 'weak-password') {
+          message = 'The password provided is too weak.';
+        } else if (e.code == 'email-already-in-use') {
+          message = 'The account already exists for that email.';
+        } else {
+          message = 'An error occurred. Please try again.';
+        }
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(message)));
+      } catch (e) {
+        print('Error occurred: $e'); // Log the error to the console
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('An unknown error occurred')));
+      } finally {
+        setState(() {
+          isLoading = false; // Stop loading
+        });
+      }
+    } else if (!agreePersonalData) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please agree to the processing of personal data')),
+      );
+    }
+  }
+
+  // Sign in with Google
+  Future<void> signInWithGoogle() async {
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      final GoogleSignIn googleSignIn = GoogleSignIn();
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+
+      if (googleUser != null) {
+        final GoogleSignInAuthentication googleAuth =
+            await googleUser.authentication;
+
+        final OAuthCredential credential = GoogleAuthProvider.credential(
+          accessToken: googleAuth.accessToken,
+          idToken: googleAuth.idToken,
+        );
+
+        // Authenticate with Firebase
+        UserCredential userCredential =
+            await _auth.signInWithCredential(credential);
+
+        User? user = userCredential.user;
+        if (user != null) {
+          // Navigate to the next screen
+          Get.to(() => PickYourTaste());
+        }
+      }
+    } on FirebaseAuthException catch (e) {
+      print("Google sign-in error: ${e.message}");
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to sign in with Google')));
+    } catch (e) {
+      print("An error occurred: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('An unknown error occurred')));
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _fullNameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return CustomScaffold(
@@ -39,13 +152,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 ),
               ),
               child: SingleChildScrollView(
-                // get started form
                 child: Form(
                   key: _formSignupKey,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      // get started text
                       Text(
                         'Get Started',
                         style: TextStyle(
@@ -57,8 +168,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       const SizedBox(
                         height: 40.0,
                       ),
-                      // full name
+                      // Full name
                       TextFormField(
+                        controller: _fullNameController,
+                        keyboardType: TextInputType.name,
+                        textInputAction: TextInputAction.next,
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return 'Please enter Full name';
@@ -73,13 +187,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           ),
                           border: OutlineInputBorder(
                             borderSide: const BorderSide(
-                              color: Colors.black12, // Default border color
+                              color: Colors.black12,
                             ),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderSide: const BorderSide(
-                              color: Colors.black12, // Default border color
+                              color: Colors.black12,
                             ),
                             borderRadius: BorderRadius.circular(10),
                           ),
@@ -88,8 +202,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       const SizedBox(
                         height: 25.0,
                       ),
-                      // email
+                      // Email
                       TextFormField(
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        textInputAction: TextInputAction.next,
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return 'Please enter Email';
@@ -104,13 +221,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           ),
                           border: OutlineInputBorder(
                             borderSide: const BorderSide(
-                              color: Colors.black12, // Default border color
+                              color: Colors.black12,
                             ),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderSide: const BorderSide(
-                              color: Colors.black12, // Default border color
+                              color: Colors.black12,
                             ),
                             borderRadius: BorderRadius.circular(10),
                           ),
@@ -119,8 +236,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       const SizedBox(
                         height: 25.0,
                       ),
-                      // password
+                      // Password
                       TextFormField(
+                        controller: _passwordController,
+                        textInputAction: TextInputAction.done,
                         obscureText: true,
                         obscuringCharacter: '*',
                         validator: (value) {
@@ -137,13 +256,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           ),
                           border: OutlineInputBorder(
                             borderSide: const BorderSide(
-                              color: Colors.black12, // Default border color
+                              color: Colors.black12,
                             ),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderSide: const BorderSide(
-                              color: Colors.black12, // Default border color
+                              color: Colors.black12,
                             ),
                             borderRadius: BorderRadius.circular(10),
                           ),
@@ -152,7 +271,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       const SizedBox(
                         height: 25.0,
                       ),
-                      // i agree to the processing
+                      // Agree to personal data processing
                       Row(
                         children: [
                           Checkbox(
@@ -182,35 +301,31 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       const SizedBox(
                         height: 25.0,
                       ),
-                      // signup button
+                      // Sign up button
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color.fromARGB(217, 37, 90, 117),
+                          ),
                           onPressed: () {
-                            Get.to(() => PickYourTaste());
-
-                            if (_formSignupKey.currentState!.validate() &&
-                                agreePersonalData) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Processing Data'),
-                                ),
-                              );
+                            if (_formSignupKey.currentState!.validate() && agreePersonalData) {
+                              createUserWithEmailAndPassword();
                             } else if (!agreePersonalData) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                    content: Text(
-                                        'Please agree to the processing of personal data')),
+                                const SnackBar(content: Text('Please agree to the processing of personal data')),
                               );
                             }
                           },
-                          child: const Text('Sign up'),
+                          child: isLoading
+                              ? const CircularProgressIndicator(color: Colors.white)
+                              : const Text('Sign up', style: TextStyle(color: Colors.white)),
                         ),
                       ),
                       const SizedBox(
                         height: 30.0,
                       ),
-                      // sign up divider
+                      // Sign-up divider
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -221,10 +336,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             ),
                           ),
                           const Padding(
-                            padding: EdgeInsets.symmetric(
-                              vertical: 0,
-                              horizontal: 10,
-                            ),
+                            padding: EdgeInsets.symmetric(horizontal: 10),
                             child: Text(
                               'Sign up with',
                               style: TextStyle(
@@ -243,18 +355,20 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       const SizedBox(
                         height: 30.0,
                       ),
-                      // sign up social media logo
+                      // Social media logos
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
-                          Logo(Logos.facebook_f),
-                          Logo(Logos.google),
-                        ],
+                         GestureDetector(
+                         onTap: signInWithGoogle,
+                         child: Logo(Logos.google), // Assuming you have a Logo widget for Google
+                        ),
+                      ],
                       ),
                       const SizedBox(
                         height: 25.0,
                       ),
-                      // already have an account
+                      // Already have an account
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [

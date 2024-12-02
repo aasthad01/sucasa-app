@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'RoomAnalysisPage.dart';  // Assuming RoomAnalysisPage is in a separate file
 
 void main() => runApp(MyApp());
 
@@ -41,7 +42,9 @@ class _ImagePickerAppState extends State<CameraPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            _image == null ? Text('No image selected.') : Image.file(_image!),
+            _image == null
+                ? Text('No image selected.')
+                : Image.file(_image!),
             SizedBox(height: 20),
             ElevatedButton(
               onPressed: () => _pickImage(ImageSource.camera),
@@ -50,6 +53,21 @@ class _ImagePickerAppState extends State<CameraPage> {
             ElevatedButton(
               onPressed: () => _pickImage(ImageSource.gallery),
               child: Text('Pick Image from Gallery'),
+            ),
+            SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: _image == null
+                  ? null
+                  : () {
+                      // Navigate to the RoomAnalysisPage with the selected image
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => RoomAnalysisPage(imageFile: _image!),
+                        ),
+                      );
+                    },
+              child: Text('Analyze Room'),
             ),
           ],
         ),
