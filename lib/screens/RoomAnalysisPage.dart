@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
@@ -5,11 +6,13 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:google_ml_kit/google_ml_kit.dart';
 import 'package:google_mlkit_object_detection/google_mlkit_object_detection.dart';
+import 'package:http/http.dart' as http;
 
 class RoomAnalysisPage extends StatefulWidget {
   final File imageFile;
 
   RoomAnalysisPage({required this.imageFile});
+
   @override
   _RoomAnalysisPageState createState() => _RoomAnalysisPageState();
 }
@@ -17,10 +20,12 @@ class RoomAnalysisPage extends StatefulWidget {
 class _RoomAnalysisPageState extends State<RoomAnalysisPage> {
   File? _image;
   String _mlResult = 'Processing...';
+  String _imageUrl = '';
   final ImagePicker _picker = ImagePicker();
 
   // Function to pick image from gallery or camera
   Future<void> _pickImage(ImageSource source) async {
+    print('Picking image from $source...');
     final pickedFile = await _picker.pickImage(source: source);
     setState(() {
       if (pickedFile != null) {
@@ -31,13 +36,19 @@ class _RoomAnalysisPageState extends State<RoomAnalysisPage> {
         _mlResult = 'No image selected.';
       }
     });
+    print(_image != null ? 'Image selected: ${_image!.path}' : 'No image selected');
   }
 
   // Function to analyze the selected image
   Future<void> _analyzeRoom() async {
-    if (_image == null) return;
+    if (_image == null) {
+      print('No image to analyze.');
+      return;
+    }
 
+    print('Starting image analysis...');
     final inputImage = InputImage.fromFilePath(_image!.path);
+    print('Input image path: ${_image!.path}');
 
     // Set up the ObjectDetector with options
     final objectDetector = ObjectDetector(
@@ -49,8 +60,14 @@ class _RoomAnalysisPageState extends State<RoomAnalysisPage> {
     );
 
     try {
+      print('Running object detection...');
       // Detect objects in the image
       final detectedObjects = await objectDetector.processImage(inputImage);
+      print('Detected objects: ${detectedObjects.length}');
+      
+      if (detectedObjects.isEmpty) {
+        print('No objects detected.');
+      }
 
       // Extracting layout information from detected objects
       final layout = detectedObjects.map((obj) {
@@ -60,21 +77,34 @@ class _RoomAnalysisPageState extends State<RoomAnalysisPage> {
         };
       }).toList();
 
+      // Debugging layout information
+      print('Layout information:');
+      layout.forEach((item) {
+        print('Label: ${item['label']}, BoundingBox: ${item['boundingBox']}');
+      });
+
       // Estimate room dimensions based on the detected objects
       final roomDimensions = _estimateRoomDimensions(detectedObjects);
+      print('Estimated Room Dimensions: Width: ${roomDimensions.width}, Length: ${roomDimensions.length}, Height: ${roomDimensions.height}');
 
       // Generate the API prompt for image generation
       final apiPrompt = _generateApiPrompt(roomDimensions, layout);
+      print('Generated API Prompt: $apiPrompt');
 
       setState(() {
         _mlResult = apiPrompt; // Display the generated API prompt
       });
+
+      // Now, use the generated prompt to create an image via Gemini API
+      await _generateImageWithGemini(apiPrompt);
     } catch (e) {
+      print('Error during room analysis: $e');
       setState(() {
         _mlResult = 'Error in room analysis: $e';
       });
     } finally {
       objectDetector.close();
+      print('Object detector closed.');
     }
   }
 
@@ -86,12 +116,13 @@ class _RoomAnalysisPageState extends State<RoomAnalysisPage> {
 
     if (objects.isNotEmpty) {
       final boundingBoxes = objects.map((obj) => obj.boundingBox).toList();
-
       estimatedWidth = boundingBoxes.map((box) => box.width).reduce(max);
       estimatedLength = boundingBoxes.map((box) => box.height).reduce(max);
       estimatedHeight = estimatedWidth * 2.5; // Approximate room height
     }
 
+    print('Estimated Width: $estimatedWidth, Estimated Length: $estimatedLength, Estimated Height: $estimatedHeight');
+    
     return RoomDimensions(
       width: estimatedWidth,
       length: estimatedLength,
@@ -117,6 +148,41 @@ class _RoomAnalysisPageState extends State<RoomAnalysisPage> {
         $layoutDescription
       - Include realistic lighting and ambiance with a modern aesthetic.
     ''';
+  }
+
+  // Function to generate image using Gemini
+  Future<void> _generateImageWithGemini(String prompt) async {
+    final apiKey = 'YOUR_API_KEY';  // Replace with your actual API key
+    final url = Uri.parse('https://gemini.googleapis.com/v1/generateImage');  // Replace with Gemini's image generation endpoint
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $apiKey',
+        },
+        body: jsonEncode({
+          'prompt': prompt,
+          'size': '1024x1024', // Adjust based on Gemini API
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        setState(() {
+          _imageUrl = responseData['image_url'];  // Adjust based on Gemini's response structure
+        });
+      } else {
+        setState(() {
+          _mlResult = 'Failed to generate image: ${response.statusCode}';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _mlResult = 'Error generating image: $e';
+      });
+    }
   }
 
   @override
@@ -152,6 +218,11 @@ class _RoomAnalysisPageState extends State<RoomAnalysisPage> {
                   textAlign: TextAlign.center,
                 ),
               ),
+              SizedBox(height: 20),
+              // Display the generated image (if available)
+              _imageUrl.isNotEmpty
+                  ? Image.network(_imageUrl)
+                  : SizedBox(),
             ],
           ),
         ),
